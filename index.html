@@ -4,12 +4,288 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>secret santa puzzle 2</title>
-  <link rel="stylesheet" href="styles.css">
+  <style>
+:root{
+  --bg:#0b1220;
+  --panel:#0f1724;
+  --tile:#111827;
+  --tile-border:#374151;
+  --correct:#16a34a; /* green */
+  --present:#f59e0b; /* amber */
+  --absent:#3f3f46;  /* gray */
+  --accent:#ef4444;  /* red */
+  --snow: rgba(255,255,255,0.95);
+  --light-red: #ff6b6b;
+  --light-green: #6be19b;
+  --light-yellow: #ffd66b;
+  --light-blue: #6bc7ff;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background: linear-gradient(180deg, #07142a 0%, #08334b 40%, #04121a 100%);
+  color:#e6eef8;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  min-height:100vh;
+  padding:24px;
+  background-attachment: fixed;
+}
+
+/* header layout (grid so title stays centered) */
+.header{
+  width:100%;
+  max-width:720px;
+  display:grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items:center;
+  margin-bottom:18px;
+  position:relative;
+  padding-top:18px;
+}
+.lights{
+  position:absolute;
+  left:0;
+  right:0;
+  top: -8px;
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  pointer-events:none;
+  z-index:2;
+}
+.bulb{
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  display:inline-block;
+  box-shadow:0 6px 12px rgba(0,0,0,0.5);
+  transform-origin:center;
+  opacity:0.95;
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,0.6));
+  animation:twinkle 2.4s infinite ease-in-out;
+}
+.bulb.red{ background:var(--light-red); animation-delay:0s; }
+.bulb.green{ background:var(--light-green); animation-delay:0.2s; }
+.bulb.yellow{ background:var(--light-yellow); animation-delay:0.4s; }
+.bulb.blue{ background:var(--light-blue); animation-delay:0.6s; }
+
+@keyframes twinkle{
+  0%,100%{ transform:translateY(0) scale(0.95); box-shadow:0 6px 12px rgba(0,0,0,0.5); opacity:0.85; }
+  50%{ transform:translateY(-3px) scale(1.08); box-shadow:0 12px 24px rgba(0,0,0,0.55); opacity:1; }
+}
+
+/* header title and controls */
+.header h1{
+  margin:0;
+  font-size:22px;
+  text-transform:lowercase;
+  letter-spacing:1px;
+  z-index:3;
+  grid-column:2;
+  justify-self:center;
+  /* subtle holiday glow */
+  color: #fff6f6;
+  text-shadow:
+    0 0 6px rgba(239,68,68,0.55),
+    0 0 18px rgba(239,68,68,0.22),
+    0 2px 0 rgba(0,0,0,0.6);
+  padding:6px 12px;
+  border-radius:8px;
+  background: linear-gradient(180deg, rgba(239,68,68,0.03), rgba(255,255,255,0.01));
+  font-weight:800;
+}
+.controls{ grid-column:3; justify-self:end; }
+
+/* small festive accent next to title (decorative) */
+.header h1::before{
+  content: "🎄";
+  margin-right:8px;
+  display:inline-block;
+  transform:translateY(-1px);
+}
+
+/* buttons */
+.btn{
+  background:linear-gradient(180deg,var(--accent), #a50f1f);
+  border:none;
+  color:white;
+  padding:8px 12px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:600;
+  box-shadow:0 6px 18px rgba(0,0,0,0.4);
+}
+.btn.small{padding:6px 10px;font-size:14px}
+
+/* game area */
+.game{
+  width:100%;
+  max-width:720px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:18px;
+  margin-bottom:40px;
+  padding:28px;
+  border-radius:14px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+  border:1px solid rgba(255,255,255,0.03);
+  position:relative;
+  z-index:3;
+}
+
+/* board */
+.board{
+  display:grid;
+  gap:8px;
+  margin:4px 0 0 0;
+  justify-content:center;
+}
+.tile-row{
+  display:grid;
+  gap:8px;
+  grid-auto-flow:column;
+  justify-content:center;
+}
+.tile{
+  width:64px;
+  height:64px;
+  background:var(--tile);
+  border:2px solid var(--tile-border);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:700;
+  font-size:28px;
+  text-transform:uppercase;
+  border-radius:8px;
+  transform-style:preserve-3d;
+  transition:transform 0.3s ease, background 0.2s ease, border-color 0.2s ease;
+  color:var(--snow);
+  box-shadow:0 2px 0 rgba(0,0,0,0.6) inset;
+}
+
+/* flip animation */
+.flip{
+  animation:flip 600ms ease forwards;
+}
+@keyframes flip{
+  0%{ transform: rotateX(0); }
+  50%{ transform: rotateX(-90deg); }
+  100%{ transform: rotateX(0); }
+}
+
+/* states */
+.tile.absent{ background:var(--absent); border-color:var(--absent); color:white; }
+.tile.present{ background:var(--present); border-color:var(--present); color:white; }
+.tile.correct{ background:var(--correct); border-color:var(--correct); color:white; }
+
+/* keyboard */
+.keyboard{ width:100%; display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+.keys-row{ display:flex; justify-content:center; gap:8px; }
+.key{
+  padding:12px 10px;
+  border-radius:6px;
+  border:none;
+  background:rgba(255,255,255,0.06);
+  color:var(--snow);
+  font-weight:700;
+  cursor:pointer;
+  min-width:44px;
+  text-transform:uppercase;
+  box-shadow:0 3px 0 rgba(0,0,0,0.3);
+}
+.key.special{ min-width:72px; padding-left:14px; padding-right:14px; }
+.key.absent{ background:var(--absent); color:white; }
+.key.present{ background:var(--present); color:white; }
+.key.correct{ background:var(--correct); color:white; }
+
+/* modal */
+.modal{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(180deg, rgba(2,6,23,0.6), rgba(2,6,23,0.8));
+  z-index:100;
+}
+.modal.hidden{ display:none; }
+.modal-content{
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  padding:22px;
+  border-radius:12px;
+  width:92%;
+  max-width:520px;
+  text-align:center;
+  border:1px solid rgba(255,255,255,0.04);
+}
+.link-box{ display:flex; gap:8px; margin:12px 0; align-items:center; }
+.link-box input{ flex:1; padding:8px 10px; border-radius:8px; border:none; background:rgba(255,255,255,0.03); color:var(--snow); font-weight:600; }
+.modal-actions{ display:flex; gap:8px; justify-content:center; }
+
+/* falling snowflakes animation (decorative) */
+.snowflakes{
+  position:fixed;
+  pointer-events:none;
+  top:0;
+  left:0;
+  right:0;
+  bottom:0;
+  overflow:hidden;
+  z-index:1;
+}
+.flake{
+  position:absolute;
+  top:-10%;
+  left:50%;
+  font-size:18px;
+  color:rgba(255,255,255,0.9);
+  opacity:0.9;
+  animation:fall linear infinite;
+  transform:translate3d(0,0,0);
+  text-shadow:0 1px 0 rgba(0,0,0,0.3);
+}
+
+/* create variety using nth-child selectors (delays, left positions, sizes) */
+.snowflakes .flake:nth-child(1){ left:5%; animation-duration:10s; font-size:14px; animation-delay:0s; opacity:0.9; }
+.snowflakes .flake:nth-child(2){ left:18%; animation-duration:14s; font-size:18px; animation-delay:1s; opacity:0.85; }
+.snowflakes .flake:nth-child(3){ left:30%; animation-duration:12s; font-size:12px; animation-delay:3s; opacity:0.95; }
+.snowflakes .flake:nth-child(4){ left:42%; animation-duration:16s; font-size:20px; animation-delay:2.5s; opacity:0.8; }
+.snowflakes .flake:nth-child(5){ left:55%; animation-duration:11s; font-size:15px; animation-delay:0.6s; opacity:0.92; }
+.snowflakes .flake:nth-child(6){ left:68%; animation-duration:13s; font-size:17px; animation-delay:2.1s; opacity:0.88; }
+.snowflakes .flake:nth-child(7){ left:78%; animation-duration:15s; font-size:13px; animation-delay:4s; opacity:0.9; }
+.snowflakes .flake:nth-child(8){ left:86%; animation-duration:9s;  font-size:19px; animation-delay:1.4s; opacity:0.86; }
+.snowflakes .flake:nth-child(9){ left:92%; animation-duration:12s; font-size:16px; animation-delay:3.7s; opacity:0.9; }
+.snowflakes .flake:nth-child(10){ left:60%; animation-duration:18s; font-size:22px; animation-delay:5s; opacity:0.8; }
+
+@keyframes fall{
+  0%{ transform: translateY(-10vh) rotate(0deg); opacity:0; }
+  10%{ opacity:0.9; }
+  100%{ transform: translateY(110vh) rotate(360deg); opacity:0.9; }
+}
+
+/* responsive */
+@media (max-width:520px){
+  .tile{ width:48px; height:48px; font-size:20px; }
+  .key{ padding:10px 6px; min-width:36px; font-size:14px; }
+  .lights{ top:-14px; }
+  .bulb{ width:12px; height:12px; }
+  .header h1{ font-size:18px; }
+}
+  </style>
 </head>
 <body>
   <!-- falling snowflakes container -->
   <div class="snowflakes" aria-hidden="true">
-    <!-- several flakes to animate (varied sizes and delays handled in CSS) -->
     <div class="flake">❅</div>
     <div class="flake">❆</div>
     <div class="flake">❅</div>
@@ -88,7 +364,7 @@
   <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="modal-content">
       <h2>Nice! You guessed it!</h2>
-      <p>Share this link:</p>
+      <p id="modalMessage">here is the link to the next puzzle, good luck!</p>
       <div class="link-box">
         <input id="shareLink" readonly value="link">
         <button id="copyBtn" class="btn small">Copy</button>
@@ -100,6 +376,265 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script>
+  // secret santa puzzle 2 - Wordle-like (6 letters: NUTMEG)
+  (() => {
+    const ANSWER = "NUTMEG"; // must be uppercase
+    const WORD_LENGTH = ANSWER.length;
+    const MAX_ROWS = 8; // increased from 6 to 8
+
+    const boardEl = document.getElementById("board");
+    const keyboardEl = document.getElementById("keyboard");
+    const restartBtn = document.getElementById("restart");
+    const modal = document.getElementById("modal");
+    const modalClose = document.getElementById("modalClose");
+    const modalRestart = document.getElementById("modalRestart");
+    const copyBtn = document.getElementById("copyBtn");
+    const shareInput = document.getElementById("shareLink");
+    const modalMessage = document.getElementById("modalMessage");
+
+    let currentRow = 0;
+    let currentCol = 0;
+    let board = Array.from({length: MAX_ROWS}, () => Array(WORD_LENGTH).fill(""));
+
+    // Build board grid based on WORD_LENGTH and MAX_ROWS
+    function buildBoard(){
+      boardEl.innerHTML = "";
+      boardEl.style.gridTemplateRows = `repeat(${MAX_ROWS}, auto)`;
+      for(let r=0;r<MAX_ROWS;r++){
+        const row = document.createElement("div");
+        row.className = "tile-row";
+        row.dataset.row = r;
+        for(let c=0;c<WORD_LENGTH;c++){
+          const tile = document.createElement("div");
+          tile.className = "tile";
+          tile.id = `tile-${r}-${c}`;
+          tile.setAttribute("aria-label","empty");
+          row.appendChild(tile);
+        }
+        boardEl.appendChild(row);
+      }
+    }
+
+    function setTile(r,c,letter){
+      const el = document.getElementById(`tile-${r}-${c}`);
+      if(!el) return;
+      el.textContent = letter;
+      el.setAttribute("aria-label", letter || "empty");
+    }
+
+    function pressKey(key){
+      if(!modal.classList.contains("hidden")) return; // disable input when modal open
+      if(key === "Enter"){
+        submitGuess();
+      } else if(key === "Backspace"){
+        deleteLetter();
+      } else if(/^[A-Z]$/.test(key)){
+        addLetter(key);
+      }
+    }
+
+    function addLetter(letter){
+      if(currentCol >= WORD_LENGTH) return;
+      board[currentRow][currentCol] = letter;
+      setTile(currentRow, currentCol, letter);
+      currentCol++;
+    }
+
+    function deleteLetter(){
+      if(currentCol <= 0) return;
+      currentCol--;
+      board[currentRow][currentCol] = "";
+      setTile(currentRow, currentCol, "");
+    }
+
+    function submitGuess(){
+      // Check for empty slots in the current row
+      if(board[currentRow].some(ch => ch === "")){
+        flashMessage("Not enough letters");
+        return;
+      }
+
+      const guess = board[currentRow].join("");
+      // Evaluate guess with correct duplicate behaviour
+      const answerArr = ANSWER.split("");
+      const guessArr = guess.split("");
+      const result = Array(WORD_LENGTH).fill("absent");
+      const letterCounts = {};
+
+      // count letters in ANSWER
+      for(const ch of answerArr){
+        letterCounts[ch] = (letterCounts[ch] || 0) + 1;
+      }
+
+      // first pass: correct
+      for(let i=0;i<WORD_LENGTH;i++){
+        if(guessArr[i] === answerArr[i]){
+          result[i] = "correct";
+          letterCounts[guessArr[i]]--;
+        }
+      }
+      // second pass: present
+      for(let i=0;i<WORD_LENGTH;i++){
+        if(result[i] === "correct") continue;
+        const g = guessArr[i];
+        if(letterCounts[g] && letterCounts[g] > 0){
+          result[i] = "present";
+          letterCounts[g]--;
+        } else {
+          result[i] = "absent";
+        }
+      }
+
+      // animate flip and set classes
+      for(let i=0;i<WORD_LENGTH;i++){
+        const tile = document.getElementById(`tile-${currentRow}-${i}`);
+        tile.classList.add("flip");
+        ((tile, cls) => {
+          setTimeout(() => {
+            tile.classList.remove("flip");
+            tile.classList.add(cls);
+          }, i * 250); // stagger
+        })(tile, result[i]);
+
+        // update keyboard after flip
+        setTimeout(() => {
+          const keyButtons = [...keyboardEl.querySelectorAll(`[data-key="${guessArr[i]}"]`)];
+          keyButtons.forEach(kb => updateKeyState(kb, result[i]));
+        }, i * 250 + 300);
+      }
+
+      // check win/lose
+      if(guess === ANSWER){
+        setTimeout(() => showSuccess(), WORD_LENGTH * 250 + 350);
+        return;
+      }
+
+      currentRow++;
+      currentCol = 0;
+
+      if(currentRow >= MAX_ROWS){
+        setTimeout(() => showFailure(), 600);
+      }
+    }
+
+    function updateKeyState(keyEl, newState){
+      if(!keyEl) return;
+      // priority: correct > present > absent
+      if(keyEl.classList.contains("correct")) return;
+      if(newState === "correct"){
+        keyEl.classList.remove("present","absent");
+        keyEl.classList.add("correct");
+      } else if(newState === "present"){
+        if(!keyEl.classList.contains("correct")){
+          keyEl.classList.remove("absent");
+          keyEl.classList.add("present");
+        }
+      } else if(newState === "absent"){
+        if(!keyEl.classList.contains("correct") && !keyEl.classList.contains("present")){
+          keyEl.classList.add("absent");
+        }
+      }
+    }
+
+    function flashMessage(msg){
+      const orig = document.querySelector(".header h1").textContent;
+      const h = document.querySelector(".header h1");
+      h.textContent = msg;
+      setTimeout(()=> h.textContent = orig , 1100);
+    }
+
+    function showSuccess(){
+      // update modal message per your request
+      if (modalMessage) modalMessage.textContent = "here is the link to the next puzzle, good luck!";
+      shareInput.value = "link";
+      modal.classList.remove("hidden");
+      modal.setAttribute("aria-hidden","false");
+    }
+
+    function showFailure(){
+      flashMessage("Game over — " + ANSWER);
+    }
+
+    function restart(){
+      // clear board state
+      board = Array.from({length: MAX_ROWS}, () => Array(WORD_LENGTH).fill(""));
+      currentRow = 0;
+      currentCol = 0;
+      // rebuild board & reset keyboard state
+      buildBoard();
+      const keys = [...keyboardEl.querySelectorAll(".key")];
+      keys.forEach(k => k.classList.remove("absent","present","correct"));
+      modal.classList.add("hidden");
+      modal.setAttribute("aria-hidden","true");
+    }
+
+    // build keyboard listeners
+    function bindKeyboard(){
+      keyboardEl.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-key]");
+        if(!btn) return;
+        const key = btn.dataset.key;
+        pressKey(key);
+      });
+
+      window.addEventListener("keydown", (e) => {
+        if(e.key === "Enter") { pressKey("Enter"); e.preventDefault(); }
+        else if(e.key === "Backspace") { pressKey("Backspace"); e.preventDefault(); }
+        else {
+          const k = e.key.toUpperCase();
+          if(k.length === 1 && k >= "A" && k <= "Z"){
+            pressKey(k);
+          }
+        }
+      });
+
+      restartBtn.addEventListener("click", restart);
+
+      // modal controls (elements exist in DOM)
+      const modalCloseBtn = document.getElementById("modalClose");
+      const modalRestartBtn = document.getElementById("modalRestart");
+      if (modalCloseBtn) {
+        modalCloseBtn.addEventListener("click", () => {
+          modal.classList.add("hidden");
+          modal.setAttribute("aria-hidden","true");
+        });
+      }
+      if (modalRestartBtn) {
+        modalRestartBtn.addEventListener("click", () => {
+          modal.classList.add("hidden");
+          modal.setAttribute("aria-hidden","true");
+          restart();
+        });
+      }
+
+      copyBtn.addEventListener("click", () => {
+        const text = shareInput.value || "link";
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(() => {
+            copyBtn.textContent = "Copied!";
+            setTimeout(()=> copyBtn.textContent = "Copy", 1200);
+          }).catch(()=>{
+            copyBtn.textContent = "Copied!";
+          });
+        } else {
+          // fallback
+          shareInput.select();
+          document.execCommand("copy");
+          copyBtn.textContent = "Copied!";
+          setTimeout(()=> copyBtn.textContent = "Copy", 1200);
+        }
+      });
+    }
+
+    // initialize
+    buildBoard();
+    bindKeyboard();
+
+    // Expose restart to console for debugging
+    window._ssRestart = restart;
+
+  })();
+  </script>
 </body>
 </html>
